@@ -14,7 +14,7 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors({ origin: ['https://akmsyful-l2-ass-6.netlify.app'], credentials: true }));
+app.use(cors({ origin: ['http://localhost:5173'], credentials: true }));
 app.use(express.json());
 
 // Configure Cloudinary
@@ -38,9 +38,13 @@ async function run() {
         await client.connect();
         console.log("Connected to MongoDB");
 
-        const db = client.db('assignment-6');
+        const db = client.db('assignment-7-l2');
         const collection = db.collection('users');
         const suppliesCollection = db.collection('supplies');
+        const volunteerCollection = db.collection('volunteer');
+        const communityCollection = db.collection("community");
+        const suppliersCollection = db.collection("suppliers");
+        const commentCollection = db.collection("comment");
 
         // User Registration
         app.post('/api/v1/register', async (req, res) => {
@@ -100,7 +104,7 @@ async function run() {
         // ==============================================================
 
 
-
+        // start supply api
         app.post("/api/v1/create-supply", async (req, res) => {
             const { image, title, category, amount, description } = req.body;
             const result = await suppliesCollection.insertOne({
@@ -113,7 +117,7 @@ async function run() {
             });
         });
 
-      
+
         app.get("/api/v1/supplies", async (req, res) => {
             try {
                 const { limit } = req.query;
@@ -226,11 +230,182 @@ async function run() {
             }
         });
 
+        // end supply api
 
 
 
+        // start volunteer api
+
+        app.post("/api/v1/volunteer", async (req, res) => {
+            const { image, name, email, mobile, location, passion } = req.body;
+            const result = await volunteerCollection.insertOne({
+                image, name, email, mobile, location, passion
+            });
+            res.json({
+                success: true,
+                message: "Create volunteer Successfully  ",
+                result
+            });
+        });
 
 
+        app.get("/api/v1/volunteer", async (req, res) => {
+            try {
+                const { limit } = req.query;
+                let result;
+
+                if (limit) {
+                    result = await volunteerCollection.find({}).limit(parseInt(limit)).toArray();
+                } else {
+                    result = await volunteerCollection.find({}).toArray();
+                }
+
+                res.json({
+                    success: true,
+                    message: "Successfully retrieve volunteer!",
+                    data: result
+                });
+            } catch (error) {
+                res.status(500).json({
+                    success: false,
+                    message: "Failed to retrieve volunteer",
+                    error: error.message
+                });
+            }
+        });
+
+
+        // end volunteer api
+
+        // start community api
+        app.post("/api/v1/community", async (req, res) => {
+            const { image, title, description } = req.body;
+            const currentDate = new Date();
+            const formattedDate = currentDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            const result = await communityCollection.insertOne({
+                image, title, description, createdAt: formattedDate
+            });
+            res.json({
+                success: true,
+                message: "Create community Successfully  ",
+                result
+            });
+        });
+
+
+        app.get("/api/v1/community", async (req, res) => {
+            try {
+                const { limit } = req.query;
+                let result;
+
+                if (limit) {
+                    result = await communityCollection.find({}).limit(parseInt(limit)).toArray();
+                } else {
+                    result = await communityCollection.find({}).toArray();
+                }
+
+                res.json({
+                    success: true,
+                    message: "Successfully retrieve community!",
+                    data: result
+                });
+            } catch (error) {
+                res.status(500).json({
+                    success: false,
+                    message: "Failed to retrieve community",
+                    error: error.message
+                });
+            }
+        });
+
+        app.get("/api/v1/community/:id", async (req, res) => {
+            try {
+                const { id } = req.params;
+                const data = await communityCollection.findOne(new ObjectId(id));
+
+                if (!data) {
+                    return res.status(404).json({
+                        success: false,
+                        message: "community post are not found",
+                    });
+                }
+
+                res.json({
+                    success: true,
+                    message: "Successfully retrieved community",
+                    data,
+                });
+            } catch (error) {
+                console.error("Error retrieving community:", error);
+                res.status(500).json({
+                    success: false,
+                    message: "Internal server error",
+                    error: error.message,
+                });
+            }
+        });
+        // end community api
+
+        app.get("/api/v1/user", async (req, res) => {
+            const data = await collection.find({}).toArray();
+            res.json({
+                success: true,
+                message: "successfully retrieve user!",
+                data,
+            });
+        });
+        app.get("/api/v1/user/:email", async (req, res) => {
+            const { email } = req.params;
+            const data = await collection.findOne({ email });
+            res.json({
+                success: true,
+                message: "successfully retrieve user!",
+                data,
+            });
+        });
+
+
+        app.post("/api/v1/comment", async (req, res) => {
+            const { name, email, comment, id } = req.body;
+            const currentDate = new Date();
+            const formattedDate = currentDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        
+            const result = await commentCollection.insertOne({
+                name,
+                email,
+                comment,
+                time: formattedDate,
+                id 
+            });
+            res.json({
+                success: true,
+                message: "Comment Posted Successfully!",
+                result,
+            });
+        });
+        
+        app.get("/api/v1/comment", async (req, res) => {
+            try {
+                const { id } = req.query;
+                const query = id ? { id } : {};
+        
+                const data = await commentCollection.find(query).toArray();
+        
+                res.json({
+                    success: true,
+                    message: "Successfully retrieve comments!",
+                    data,
+                });
+            } catch (error) {
+                console.error("Error retrieving comments:", error);
+                res.status(500).json({
+                    success: false,
+                    message: "An error occurred while retrieving comments",
+                    error: error.message,
+                });
+            }
+        });
+        
 
         app.post('/api/v1/upload', upload.single('image'), async (req, res) => {
             try {
